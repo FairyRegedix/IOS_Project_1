@@ -1,0 +1,148 @@
+#!/bin/sh
+
+###### IOS Projekt 1
+###### autor: Patrik Demsky
+###### login: xdemsk00
+###### datum: 24.3.2020
+
+export POSIXLY_CORRECT=yes
+
+i_arg=false #bool hodnota pri vynechani suboru
+n_arg=false #bool hodnota pri normalizacii
+
+while getopts :i:n opt; do
+  case ${opt} in
+    i ) # proces pri vykonaní [-i]
+    i_arg=true
+    ignore=$OPTARG;;
+    n ) # proces pri vykonaní [-n]
+    n_arg=true;;
+    * )  # chybný proces
+    echo "Use options i with a parameter or n." >&2
+    exit 1;;
+  esac
+done
+
+shift $((OPTIND-1))
+
+counter=$(echo $* | wc -w)
+case $counter in
+    0 ) #ziaden argument
+    directory=$PWD;;
+    1 ) #jeden argument
+    if [ -d $* ]
+    then 
+        directory=$*
+    else    
+        echo Not a directory
+        exit 1
+    fi;;
+    * ) #viac argumentov
+    echo "Bad number of arguments" >&2
+    exit 1;;
+  esac
+
+if [ "$ignore" = "$directory" ]
+then    
+    echo "You can´t ignore the root directory." >&2
+    exit 1
+fi
+
+dir=
+dir_count()
+{
+  if [ "$i_arg" = false ]
+  then
+      find $directory -type d | wc -l
+  else
+      find $directory -type d | grep -v $ignore | wc -l
+  fi
+}
+
+file=
+file_count()
+{
+  if [ "$i_arg" = false ]
+  then
+      find $directory -type f | wc -l
+  else
+      find $directory -type f | grep -v $ignore | wc -l
+  fi
+}
+
+if [ $(dir_count) = 0 ]  
+then
+	echo "You can´t process with 0 directories." >&2
+	exit 1;
+fi
+
+if [ "$i_arg" = false ]
+then 
+    b_100=$(( b_100 + $(find $directory -type f -size -100c | wc -l) ))
+    kib_1=$(( kib_1 + $(find $directory -type f -size -1k -a -size +100c | wc -l) ))
+    kib_10=$(( kib_10 + $(find $directory -type f -size -10k -a -size +1k | wc -l) ))
+    kib_100=$(( kib_100 + $(find $directory -type f -size -100k -a -size +10k | wc -l) ))
+    mib_1=$(( mib_1 + $(find $directory -type f -size -1M -a -size +100k | wc -l) ))
+    mib_10=$(( mib_10 + $(find $directory -type f -size -10M -a  -size +1M | wc -l) ))
+    mib_100=$(( mib_100 + $(find $directory -type f -size -100M -a  -size +10M | wc -l) ))
+    gib_1=$(( gib_1 + $(find $directory -type f -size -1G -a -size +100M | wc -l) ))
+    gib=$(( gib + $(find $directory -type f -size +1G | wc -l) ))
+else 
+    b_100=$(( b_100 + $(find $directory -type f -size -100c | grep -v $ignore | wc -l) ))
+    kib_1=$(( kib_1 + $(find $directory -type f -size -1k -a -size +100c | grep -v $ignore | wc -l) ))
+    kib_10=$(( kib_10 + $(find $directory -type f -size -10k -a -size +1k | grep -v $ignore | wc -l) ))
+    kib_100=$(( kib_100 + $(find $directory -type f -size -100k -a -size +10k | grep -v $ignore | wc -l) ))
+    mib_1=$(( mib_1 + $(find $directory -type f -size -1M -a -size +100k | grep -v $ignore | wc -l) ))
+    mib_10=$(( mib_10 + $(find $directory -type f -size -10M -a  -size +1M | grep -v $ignore | wc -l) ))
+    mib_100=$(( mib_100 + $(find $directory -type f -size -100M -a  -size +10M | grep -v $ignore | wc -l) ))
+    gib_1=$(( gib_1 + $(find $directory -type f -size -1G -a -size +100M | grep -v $ignore | wc -l) ))
+    gib=$(( gib + $(find $directory -type f -size +1G | grep -v $ignore | wc -l) ))
+fi
+
+if [ "$n_arg" = false ]
+then
+    b_100=$((b_100))
+    kib_1=$((kib_1))
+    kib_10=$((kib_10))
+    kib_100=$((kib_100))
+    mib_1=$((mib_1))
+    mib_10=$((mib_10))
+    mib_100=$((mib_100))
+    gib_1=$((gib_1))
+    gib=$((gib))
+else
+    b_100=$((b_100/2))
+    kib_1=$((kib_1/2))
+    kib_10=$((kib_10/2))
+    kib_100=$((kib_100/2))
+    mib_1=$((mib_1/2))
+    mib_10=$((mib_10/2))
+    mib_100=$((mib_100/2))
+    gib_1=$((gib_1/2))
+    gib=$((gib/2))
+fi
+
+#vypis textu
+echo Root directory: $directory
+echo Directories: $(dir_count)
+echo All files: $(file_count)
+echo "File size histogram:"
+
+str_1=$(printf "%${b_100}s" | tr ' ' '#')
+echo "  <100 B  : " ${str_1}
+str_2=$(printf "%${kib_1}s" | tr ' ' '#')
+echo "  <1 KiB  : " ${str_2}
+str_3=$(printf "%${kib_10}s" | tr ' ' '#')
+echo "  <10 KiB : " ${str_3}
+str_4=$(printf "%${kib_100}s" | tr ' ' '#')
+echo "  <100 KiB: " ${str_4}
+str_5=$(printf "%${mib_1}s" | tr ' ' '#')
+echo "  <1 MiB  : " ${str_5}
+str_6=$(printf "%${mib_10}s" | tr ' ' '#')
+echo "  <10 MiB : " ${str_6}
+str_7=$(printf "%${mib_100}s" | tr ' ' '#')
+echo "  <100 MiB: " ${str_7}
+str_8=$(printf "%${gib_1}s" | tr ' ' '#')
+echo "  <1 GiB  : " ${str_8}
+str_9=$(printf "%${gib}s" | tr ' ' '#')
+echo "  >=1 GiB : " ${str_9}
